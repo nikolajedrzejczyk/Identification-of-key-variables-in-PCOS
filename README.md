@@ -20,20 +20,18 @@ Projekt wykonany we współpracy w ramach studiów.
    - sprawdzenie braków i uzupełnianie danych  
 
 2. **Analiza opisowa i wizualizacje:**  
-   - rozkłady wieku, BMI i podstawowych parametrów zdrowotnych 
-   - wykresy pudełkowe (boxploty) dla porównania wartości między grupami
-   - wykresy słupkowe i histogramy pokazujące częstość występowania objawów  
-   - wykresy punktowe (scatter plots) dla zależności między zmiennymi 
+   - rozkłady podstawowych parametrów zdrowotnych 
+   - wizualizacja danych (wykresy pudełkowe, wykresy słupkowe i histogramy, wykresy punktowe)
 
 3. **Testy statystyczne:**  
    - porównania średnich pomiędzy grupami
-   - testy istotności dla zmiennych kategorycznych  
+   - testy istotności zmiennych
 
 4. **Budowa modeli:**  
-   - zastosowanie uogólnionych modeli liniowych (GLM, `family = binomial`) – regresja logistyczna
-   - ocena wpływu zmiennych takich jak BMI, regularność cyklu, parametry hormonalne czy występowanie objawów na prawdopodobieństwo PCOS  
+   - zastosowanie uogólnionych modeli liniowych (GLM, `family = binomial`)
+   - ocena wpływu zmiennych na prawdopodobieństwo PCOS  
 
 5. **Wnioski**  
    - BMI i parametry hormonalne mają istotne znaczenie w diagnostyce PCOS. 
-   - Nieregularne cykle i obecność objawów klinicznych (np. trądzik, hirsutyzm) są silnie związane z PCOS. 
+   - Nieregularne cykle i obecność objawów klinicznych (np. trądzik) są silnie związane z PCOS. 
    - Uogólnione modele liniowe potwierdziły istotny wpływ kilku kluczowych zmiennych na występowanie choroby.  
