@@ -7,7 +7,7 @@ Identification of key variables associated with Polycystic Ovary Syndrome (PCOS)
 Celem projektu była analiza danych pacjentek w kierunku zespołu policystycznych jajników (PCOS) oraz 
 identyfikacja kluczowych zmiennych, które mogą mieć istotny wpływ na diagnozę tej choroby.  
 
-Projekt został wykonany w języku **R** na podstawie zbioru danych [PCOS Dataset](https://www.kaggle.com/datasets) i obejmował przygotowanie danych, analizę opisową oraz budowę uogólnionych modeli liniowych (GLM, regresja logistyczna).  
+Projekt został wykonany w języku **R** na podstawie zbioru danych [PCOS Dataset](https://www.kaggle.com/datasets) i obejmował przygotowanie danych, analizę opisową oraz budowę uogólnionych modeli liniowych (GLM, regresja logistyczna). [Czerwiec 2024]
 
 Projekt wykonany we współpracy w ramach studiów.
 
