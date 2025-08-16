@@ -15,10 +15,10 @@ Projekt wykonany we współpracy w ramach studiów.
 
 ## Etapy analizy:
 1. **Wstępne przygotowanie danych:**
-   – czyszczenie i transformacja zmiennych, utworzenie zmiennych kategorycznych
-2. **Analiza opisowa:**
-   – podstawowe statystyki i wizualizacje rozkładów cech zdrowotnych i stylu życia
-3. **Budowa modeli:**
-   – zastosowanie uogólnionych modeli liniowych (GLM, `family = binomial`) do oceny wpływu zmiennych na prawdopodobieństwo wystąpienia PCOS 
-4. **Interpretacja wyników:**
-   – omówienie znaczenia poszczególnych czynników i wniosków klinicznych
+   - czyszczenie i transformacja zmiennych, utworzenie zmiennych kategorycznych
+3. **Analiza opisowa:**
+   - podstawowe statystyki i wizualizacje rozkładów cech zdrowotnych i stylu życia
+4. **Budowa modeli:**
+   - zastosowanie uogólnionych modeli liniowych (GLM, `family = binomial`) do oceny wpływu zmiennych na prawdopodobieństwo wystąpienia PCOS 
+5. **Interpretacja wyników:**
+   - omówienie znaczenia poszczególnych czynników i wniosków klinicznych
