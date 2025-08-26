@@ -1,0 +1,1057 @@
+---
+title: "Modele Parametryczne: Zespół Policystycznych Jajników (PCOS)"
+output: pdf_document
+author: Gomulak Aleksanda (272691), Jędrzejczyk Nikola (274237)
+editor_options: 
+  markdown: 
+    wrap: 72
+latex_engine: xelatex
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+```{r echo=FALSE}
+tinytex::install_tinytex(force = TRUE)
+```
+
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+# Zbiór danych:
+
+Zbiór danych, na jaki się zdecydowałyśmy, zawiera informacje dotyczące
+pacjentów przebadanych pod kątem posiadania Zespołu Policystycznych
+Jajników (PCOS).
+
+W zestawie danych znajdziemy między innymi takie kolumny jak: wiek,
+waga, regularność miesiączki, czy występują wypryski lub wzmożony porost
+włosów i tym podobne.
+
+Choroba ta stała się bardzo powszechna na przestrzeni ostatnich lat, w
+związku z tym kobiety powinny częściej kontrolować wyniki swoich badań i
+zwracać uwagę na sygnały jakie wysyła im ich ciało.
+
+Co w takim razie może sugerować nam występowanie PCOS? Na co zwrócić
+uwagę?
+
+Dane pobrałyśmy ze strony Kaggle.
+
+# Problem badawczy:
+
+Zespół policystycznych jajników (PCOS) jest jednym z najczęstszych zaburzeń endokrynologicznych u kobiet w wieku rozrodczym. Mimo licznych badań, przyczyny zachorowania na Zespół Policystycznych Jajników pozostają niewyjaśnione, a symptomy znacząco różnią się między poszczególnymi pacjentkami. To prowadzi do trudności w diagnozie i personalizacji leczenia.
+
+# Cel badania:
+
+Celem tego badania jest zidentyfikowanie czynników (takich jak nieregularność cyklu, przybranie na wadze, rośnięcie włosów, itp.) i poziomów hormonów (FSH, LH, AMH, itd.), które mogą być związane z występowaniem PCOS oraz ocena ich wpływu na prawdopodobieństwo wystąpienia tej choroby. 
+
+
+# Opis zmiennych:
+
+| Zmienna:                     | Opis:                                                                               |
+|-------------------|----------------------------------------------------|
+| PCOS:                        | czy pacjent miał zdiagnozowany PCOS? (0 - nie, 1 - tak)                             |
+| wiek:                        | wiek pacjenta                                                                       |
+| BMI:                         | wartość BMI (Body Mass Index) pacjenta                                              |
+| nieregularnosc_cyklu:        | czy cykl miesiączki jest nieregularny? (0 - nie, 1 - tak)                           |
+| ciaza:                       | czy pacjent jest w ciąży? (0 - nie, 1 - tak)                                        |
+| poziom_FSH:                  | poziom hormonu niezbędnego do prawidłowego działania jajników oraz jąder            |
+| poziom_LH:                   | poziom hormonu LH, niski poziom może być oznaką wolnego dojrzewania                 |
+| stosunek_FSH_do_LH:          | stosunek poziomów FSH do LH we krwi pacjenta                                        |
+| poziom_TSH:                  | poziom hormonu, który kontroluje sposób działania innych hormonów                   |
+| poziom_AMH:                  | poziom hormonu, który zapobiega rozwój żeńskich narządów płciowych u płodu męskiego |
+| poziom_PRL:                  | poziom prolaktyny, hormonu, który odpowiada za laktację czy rozwój piersi           |
+| poziom_PRG:                  | poziom hormonu, który zapobiega rozwój męskich narządów płciowych u płodu żeńskiego |
+| przybranie_na_wadze:         | czy pacjent przybrał na wadze? (0 - nie, 1 - tak)                                   |
+| rosniecie_wlosow:            | czy pacjentowi rosną włosy? (0 - nie, 1 - tak)                                      |
+| ciemnienie_skory:            | czy pacjentowi ciemnieje skóra? (0 - nie, 1 - tak)                                  |
+| wypadanie_wlosow:            | czy pacjentowi wypadają włosy? (0 - nie, 1 - tak)                                   |
+| wypryski_na_twarzy:          | czy pacjent ma wypryski na twarzy? (0 - nie, 1 - tak)                               |
+| cisnienie_skurczowe:         | skurczowe cisnienie krwi (systoliczne)                                              |
+| cisnienie_rozkurczowe:       | rozkurczowe cisnienie krwi (diastoliczne)                                           |
+| pecherzyki_w_lewym_jajniku:  | liczba pęcherzyków w lewym jajniku wykryta podczas badania                          |
+| pecherzyki_w_prawym_jajniku: | liczba pęcherzyków w prawym jajniku wykryta podczas badania                         |
+
+**Import potrzebnych bibliotek:**
+
+```{r, warning = FALSE, message = FALSE}
+library("dplyr")
+library("GGally")
+library("tidyr")
+library("ResourceSelection")
+library("statmod")
+library("car")
+library("ggplot2")
+library("lmtest") 
+library("pscl")
+library("pROC") 
+```
+
+**Import danych:**
+
+```{r}
+data <- read.csv("PCOS_data.csv")
+```
+
+**Usunięcie kolumn**, które nas nie interesują, są
+niepotrzebne lub przekazują podobne informacje (nie uwzględniamy ich w
+przedstawieniu zmiennych):
+
+```{r}
+to_drop <- c("Sl..No", "Patient.File.No.", "Weight..Kg.", "Height.Cm.", "Blood.Group", "Hip.inch.", "Waist.inch.", "Waist.Hip.Ratio", "Fast.food..Y.N.", "Reg.Exercise.Y.N.", "Marraige.Status..Yrs.", "II....beta.HCG.mIU.mL.", "RBS.mg.dl.", "Vit.D3..ng.mL.", "Pulse.rate.bpm.", "RR..breaths.min.", "Hb.g.dl.", "Cycle.length.days.", "No..of.abortions", "I...beta.HCG.mIU.mL.", "Avg..F.size..L...mm.", "Avg..F.size..R...mm.", "Endometrium..mm.")
+
+data <- data[,!(names(data) %in% to_drop)]
+```
+
+**Zmiana nazw kolumn** dla ułatwienia i większej czytelności:
+
+```{r}
+nazwy_kolumn <- c("PCOS", "wiek", "BMI", "nieregularnosc_cyklu", "ciaza", "poziom_FSH", "poziom_LH", "stosunek_FSH_do_LH", "poziom_TSH", "poziom_AMH", "poziom_PRL", "poziom_PRG", "przybranie_na_wadze", "rosniecie_wlosow", "ciemnienie_skory", "wypadanie_wlosow", "wypryski_na_twarzy", "cisnienie_skurczowe", "cisnienie_rozkurczowe", "pecherzyki_w_lewym_jajniku", "pecherzyki_w_prawym_jajniku")
+
+colnames(data)[1:21] <- nazwy_kolumn
+```
+
+**Sprawdzenie typów zmiennych:**
+
+```{r}
+str(data)
+```
+
+**Zmiana typu danych**, w niektórych kolumnach na zmienne
+kategorialne, ponieważ są to zmienne dychotomiczne, aby móc w następnych
+krokach z nich skorzystać:
+
+```{r}
+data$PCOS <- as.factor(data$PCOS)
+data$nieregularnosc_cyklu <- as.factor(data$nieregularnosc_cyklu)
+data$ciaza <- as.factor(data$ciaza)
+data$przybranie_na_wadze <- as.factor(data$przybranie_na_wadze)
+data$rosniecie_wlosow <- as.factor(data$rosniecie_wlosow)
+data$ciemnienie_skory <- as.factor(data$ciemnienie_skory)
+data$wypadanie_wlosow <- as.factor(data$wypadanie_wlosow)
+data$wypryski_na_twarzy <- as.factor(data$wypryski_na_twarzy)
+```
+
+Oraz jedną zmienną na numeryczną:
+
+```{r}
+data$poziom_AMH <- as.numeric(data$poziom_AMH)
+```
+
+Dla ujednolicenia danych zamieniamy **2 na 0 oraz 4 na 1**.
+
+W zbiorze danych, w zmiennej nieregularnosc_cyklu 2 oznacza, że cykl
+miesiączkowy jest regularny, a 4, że nie jest regularny. Zatem wartości
+równe 5 traktujemy jako błąd i nie korzystamy z tych obserwacji.
+
+```{r}
+data <- subset(data, nieregularnosc_cyklu != 5)
+```
+
+```{r}
+data$nieregularnosc_cyklu <- ifelse(data$nieregularnosc_cyklu == 2, 0, ifelse(data$nieregularnosc_cyklu == 4, 1, data$nieregularnosc_cyklu))
+```
+
+**Przygotowanie nowej zmiennej kategorialnej:** 
+
+Zmienną numeryczną BMI zmieniamy na zmienną kategorialną zgodnie z sugestiami WHO, traktując
+jednak wygłodzenie, wychudzenie oraz niedowagę jako jedną kategorię oraz
+trzy stopnie otyłości również jako jedną kategorię.
+
+```{r}
+data$BMI_kat <- cut(data$BMI,
+                    breaks = c(0, 18.5, 25, 30, Inf),
+                    labels = c("niedowaga", "poprawna", "nadwaga", "otyłość"),
+                    right = FALSE)
+table(data$BMI_kat)
+```
+
+**Pozbycie się możliwie występujących braków:**
+
+```{r}
+data <- na.omit(data)
+```
+
+**Sprawdzenie korelacji pomiędzy parami zmiennych:** 
+
+Prezentujemy pary zmiennych, które cechują się korelacją większą niż 0.7, ponieważ
+nadmierna korelacja par zmiennych jest niewskazana w przypadku
+uogólnionych modeli liniowych i zaleca się unikanie takich par zmiennych
+w modelu.
+
+```{r}
+cor_matrix <- cor(data[, sapply(data, is.numeric)])
+high_corr <- which(abs(cor_matrix) > 0.7 & abs(cor_matrix) < 1, arr.ind = TRUE)
+
+high_corr_pairs <- data.frame(
+  Variable1 = rownames(cor_matrix)[high_corr[, 1]],
+  Variable2 = colnames(cor_matrix)[high_corr[, 2]],
+  Correlation = cor_matrix[high_corr]
+)
+
+high_corr_pairs
+```
+
+**Wniosek:** 
+
+Występują dwie pary zmiennych o nadmiernej korelacji, które
+nie dziwią. Decydujemy się na utworzenie nowej zmiennej - średnia ilość
+pęcherzyków w jajniku oraz usunięcie zmiennej stosunek_FSH_do_LH, która
+opisuje stosunek poziomów FSH do LH we krwi pacjenta.
+
+```{r}
+data <- data[,!(names(data) %in% "stosunek_FSH_do_LH")]
+data$Follicle_średnia <- as.integer(rowMeans(data[, c("pecherzyki_w_lewym_jajniku", "pecherzyki_w_prawym_jajniku")], na.rm = TRUE))
+data <- data[,!(names(data) %in% c("pecherzyki_w_lewym_jajniku", "pecherzyki_w_prawym_jajniku"))]
+```
+
+# Wizualizacja danych:
+
+```{r dev="pdf", dev.args=list(encoding="CP1257.enc")}
+ggplot(data, aes(x = wiek, fill = as.factor(PCOS))) +
+  geom_histogram(binwidth = 1, position = "dodge", color = "black", size = 0.2) +
+  labs(fill = "PCOS:", x = "Wiek (lata)", y = "Liczba pacjentów", title = "Liczba pacjentów chorujących i niechorujących na PCOS według wieku") +
+    scale_fill_manual(values = c("0" = "lightgreen", "1" = "lightblue"), labels = c("0" = "Nie", "1" = "Tak")) + theme_minimal() +
+  theme(plot.title = element_text(size = 10)) 
+```
+
+**Wniosek:**
+
+Można zauważyć wyraźny wzrost zachorowań (lub ich wykrycia) do 30 r.ż. a
+następnie widoczny spadek. Osoby niechorujące nie wykazują żadnej
+prawidłowości, co nie budzi zaskoczenia, można jedynie zauważyć, że
+rozkład osób niechorujących na Zespół Policystycznych Jajników zdaje się
+być zbliżony do rozkładu normalnego.
+
+```{r dev="pdf", dev.args=list(encoding="CP1257.enc")}
+data_long <- data %>%
+  select(PCOS, nieregularnosc_cyklu, ciaza, przybranie_na_wadze, rosniecie_wlosow, ciemnienie_skory, wypadanie_wlosow, wypryski_na_twarzy) %>%
+  gather(key = "Symptom", value = "Value", -PCOS) %>%
+  group_by(PCOS, Symptom, Value) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  mutate(Frequency = Count / nrow(data))
+
+ ggplot(data_long, aes(x = Symptom, y = Frequency, fill = as.factor(Value))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), color = "black", size = 0.3) +
+  facet_wrap(~PCOS, scales = "free_y", labeller = as_labeller(c(`0` = "Niechorujący na PCOS:", `1` = "Chorujący na PCOS:"))) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = c("0" = "lightgreen", "1" = "lightblue"), labels = c("0" = "Nie", "1" = "Tak")) +
+  labs(title = "Procentowy udział symptomów w grupach z PCOS \n i bez PCOS:",
+       x = "Symptom",
+       y = "Procent",
+       fill = "Obecność symptomu:") +
+  theme_minimal() +
+  theme(axis..x = element_text(angle = 45, hjust = 1)) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+**Wniosek:**
+
+Zgodnie z oczekiwaniami stosunek osób, które zmagają się z powyższymi
+symptomami jest zauważalnie większy u osób, u których stwierdzono Zespół
+Policystycznych Jajników niż u osób, u których tej choroby nie
+zdiagnozowano. 
+
+Warto jednak zwrócić uwagę, że u osób chorujących
+odpowiedzi "Tak" nie przewyższają tak wyraźnie odpowiedzi "Nie". Można
+wyciągnąć wniosek, że powyższe symptomy nie są objawami determinującymi
+Zespół Policystycznych Jajników, jednak ich występowanie powinno dać
+pacjentom sygnał do spotkania się ze specjalistą.
+
+```{r dev="pdf", dev.args=list(encoding="CP1257.enc")}
+data_long <- data %>%
+  gather(key = "Type", value = "BloodPressure", cisnienie_skurczowe, cisnienie_rozkurczowe)
+
+ggplot(data_long, aes(x = Type, y = BloodPressure, fill = Type)) +
+  geom_boxplot() +
+    geom_hline(yintercept = 120, color = "darkgreen", size = 0.5) +
+  geom_hline(yintercept = 80, color = "darkblue", size = 0.5) + 
+  labs(title = "Porównanie ciśnienia krwi: rozkurczowe i skurczowe:",
+       x = "Typ ciśnienia krwi",
+       y = "cisnienie krwi (mmHg)",
+       fill = "Typ ciśnienia:") +
+  theme_minimal() +
+  scale_fill_manual(values = c("cisnienie_skurczowe" = "lightgreen", "cisnienie_rozkurczowe" = "lightblue"))
+```
+**Wniosek:**
+
+Linie niebieska i zielona reprezentują górną granicę prawidłowego
+ciśnienia. Rozstępy ćwiartkowe w obydwu wykresach są do siebie zbliżone
+lub nawet takie same. Wartości minimalne znajdują się w zauważalnie
+większej odległości od pierwszego kwartyla niż wartości maksymalne w
+odległości od trzeciego.
+
+W przypadku ciśnienia rozkurczowego mediana pokrywa się z wartością
+trzeciego kwartyla, co świadczy o tym, ze większość pacjentów ma
+ciśnienie niższe niż wartość środkowa. Mówi to o rozkładzie
+prawoskośnym.
+
+Sytuacja odwrotna zachodzi w przypadku ciśnienia skurczowego, gdzie
+mediana pokrywa się z pierwszym kwartylem. Oznacza to, że wartości
+większe od wartości środkowej i mówi to o wykresie lewoskośnym.
+
+```{r dev="pdf", dev.args=list(encoding="CP1257.enc")}
+ggplot(data, aes(x = factor(BMI_kat), fill = factor(BMI_kat))) +
+  geom_bar() +
+    geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme(legend.position = "none") +
+  labs(x = "BMI", y = "Liczba pacjentów", title = "Waga pacjenta ze względu na BMI:") + ylim(0, 320) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+**Wniosek:**
+
+Dominującą grupą są pacjenci mieszczący się w poprawnym według WHO
+indeksie masy ciała. Dużą część pacjentów stanowią osoby z nadwagą.
+Kategorie skrajne są małoliczne.
+
+# Budowa modeli:
+
+**Podział zbioru na uczący i testowy** w stosunku 70:30. Zbiór uczący służyć
+nam będzie do budowania modeli, a zbiór testowy do ich oceny.
+
+```{r}
+set.seed(1257)    
+n <- nrow(data)
+liczby_losowe <- sample(c(1:n), round(0.7*n), replace = FALSE)
+data_uczący <- data[liczby_losowe,]
+data_testowy <- data[-liczby_losowe,]
+```
+
+**Proporcje `PCOS` w podzbiorach danych:**
+
+```{r}
+summary(data$PCOS) / n
+summary(data_uczący$PCOS) / nrow(data_uczący)
+summary(data_testowy$PCOS) / nrow(data_testowy)
+```
+
+Proporcje chorujących i niechorujących na Zespół Policystycznych
+Jajników są w dużej mierze zachowane w każdym ze zbiorów.
+
+## Estymacja modelu dwumianowego logitowego: \*\*
+
+Estymacja modelu dla zmiennej dychotomicznej (PCOS) Y
+`family = binomial` z domyślną funkcją wiążącą probit `link = logit`.
+
+```{r}
+model_logit <- glm(PCOS ~ rosniecie_wlosow + wypryski_na_twarzy + ciemnienie_skory + nieregularnosc_cyklu + poziom_TSH + poziom_FSH + poziom_LH +  Follicle_średnia + poziom_AMH + poziom_PRL + poziom_PRG, data = data_uczący, family = binomial)
+
+summary(model_logit)
+```
+
+**Wniosek:** 
+
+Mamy 5 istotnym parametrów na poziomie istotności
+$\alpha = 0.05$. Ciekawym faktem jest, że zgodnie z powyższym modelem
+zmienne, mówiące o poziomach badanych hormonów zdają się nie mieć
+istotnego statystycznie wpływu na zmienną endogeniczną PCOS.
+
+**Testy istotności wszystkich zmiennych niezależnych w modelu:**
+
+Test ilorazu wiarygodności i test Walda:
+
+```{r}
+lrtest(model_logit)
+waldtest(model_logit)
+```
+
+**Wniosek:** 
+
+Zgodnie z obydwoma testami odrzucamy H0, zatem istnieją
+takie zmienne, które istotnie wpływają na kształtowanie się zmiennej
+zależnej.
+
+**Sprawdzenie czy zmienne objaśniające są współliniowe:**
+
+```{r}
+vif(model_logit)
+```
+
+**Wniosek:** 
+
+Zmienne nie są współliniowe, ponieważ oscylują wokół
+wartości 1, gdzie 1 oznacza sytuację idealną i całkowity brak
+współliniowości. W literaturze przyjmuje się zakres [1:5] jako
+umiarkowaną współliniowość, którą można zaakceptować.
+
+**Identyfikacja obserwacji wpływowych:**
+
+```{r}
+c <- 4/(nrow(data_uczący) - (length(model_logit$coefficients) - 1) - 1)
+
+plot(model_logit, which = 4)
+abline(h = c, col = "red", lty = 2)
+```
+
+Odległość Cook'a mierzy wpływ danej obserwacji na ocenę parametrów
+$\beta$ poprzez porównanie ocen wartości teoretycznych $y_{i}$
+wyznaczonych z modelu oszacowanego na podstawie wszystkich obserwacji
+oraz modelu oszacowanego bez danej obserwacji. Obserwacja jest wpływowa,
+gdy $D_{i}> \frac{4}{n-k-1}$. 
+
+Zgodnie z przyjętym progiem, model wykazuje wiele obserwacji wpływowych.
+
+```{r}
+sum(cooks.distance(model_logit)>c)
+```
+
+Zgodnie z wyliczonym progiem, w modelu występuje 31 obserwacji
+wpływowych, jednak decydujemy się na zostawienie ich. Możliwymi
+rozwiązaniami na ten problem są usunięcie tych wartości lub
+zlogarytmowanie zmiennych.
+
+```{r}
+w1 <- 2 *(length(model_logit$coefficients) - 1) / nrow(data_uczący)
+w2 <- 3 *(length(model_logit$coefficients) - 1) / nrow(data_uczący)
+  
+plot(model_logit, which = 5)
+abline(v = c(w1, w2), col = "red", lty = c(2, 3))
+```
+
+Wskaźnik dźwigni wyznaczany jest dla każdej zmiennej objaśniającej X z
+osobna, mierzy dla poszczególnych obserwacji odstępstwo od zmiennej
+objaśniającej $x_{i}$ od jej średniego poziomu. Przyjmuje się, że
+obserwacja jest wpływowa, jeżeli $W_{i}> \frac{2(k+1)}{n}$ lub
+$W_{i}> \frac{3(k+1)}{n}$.
+
+**Identyfikacja obserwacji nietypowych:**
+
+Bonferroni Outlier Test:
+
+```{r}
+outlierTest(model_logit, n.max = Inf)
+```
+
+**Wniosek:** 
+
+Zgodnie z wynikami procedury Bonferroniego w modelu nie ma
+istotnie statystycznie odstających wartości.
+
+**Estymacja modelu metodą krokową** przy minimalizacji kryterium
+informacyjnego AIC. Wykonujemy ją trzema metodami krokowymi:
+
+```{r}
+model_logit_step_both <- step(model_logit)
+model_logit_step_for <- step(model_logit, direction = 'forward')
+model_logit_step_back <- step(model_logit, direction = 'backward')
+```
+
+```{r}
+summary(model_logit_step_both)
+```
+
+```{r}
+summary(model_logit_step_for)
+```
+
+```{r}
+summary(model_logit_step_back)
+```
+
+**Wniosek:** 
+
+Metoda ‘backward’ dała takie same wyniki, co metoda
+domyślna ‘both’. Mają one mniejsze wyniki dla kryterium informacyjnego
+AIC niż metoda 'forward'.
+
+Decydujemy się na zbudowanie modelu zgodnie z metodą 'both'/'backward':
+
+```{r}
+model_logit2 <- glm(PCOS ~ rosniecie_wlosow + wypryski_na_twarzy + 
+    ciemnienie_skory + nieregularnosc_cyklu + poziom_LH + Follicle_średnia, 
+    data = data_uczący, family = binomial)
+
+summary(model_logit2)
+```
+
+Model ten zawiera zmienne istotne statystycznie co najmniej na poziomie
+0.01 oraz jedną zmienną opisującą poziom hormonu LH, która nie jest
+istotna statystycznie. Należy jednak pamiętać, że metoda krokowa dąży do
+minimalizacji kryterium AIC a nie do wykorzystania w modelu jedynie
+zmiennych istotnych statystycznie.
+
+**Testy istotności wszystkich zmiennych niezależnych oraz
+współliniowości w nowym modelu:**
+
+Test ilorazu wiarygodności i test Walda:
+
+```{r}
+lrtest(model_logit2)
+waldtest(model_logit2)
+```
+
+Test współliniowości:
+
+```{r}
+vif(model_logit2)
+```
+
+**Wniosek:** 
+
+Testy wykazały, że należy H0, zatem istnieją takie zmienne,
+które istotnie wpływają na kształtowanie się zmiennej zależnej oraz, że
+nie są one współliniowe.
+
+## Estymacja modelu dwumianowego probitowego: \*\*
+
+Estymacja modelu dla zmiennej dychotomicznej (PCOS) Y
+`family = binomial` z domyślną funkcją wiążącą probit `link = probit`.
+
+```{r}
+model_probit <- glm(PCOS ~ rosniecie_wlosow + wypryski_na_twarzy + ciemnienie_skory + nieregularnosc_cyklu + poziom_TSH + poziom_FSH + poziom_LH +  Follicle_średnia + poziom_AMH + poziom_PRL + poziom_PRG, data = data_uczący, family = binomial(link = "probit"))
+
+summary(model_probit)
+```
+
+**Wniosek:** 
+
+Występuje 5 istotnych parametrów na poziomie $\alpha = 0.05$. Podsumowanie modelu jest analogiczne do modelu logitowego,
+jednak wartość AIC jest większa.
+
+**Testy istotności wszystkich zmiennych niezależnych w modelu:**
+
+Test ilorazu wiarygodności i test Walda:
+
+```{r}
+lrtest(model_probit)
+waldtest(model_probit)
+```
+
+**Wniosek:** 
+
+Zgodnie z obydwoma testami odrzucamy H0, zatem istnieją
+takie zmienne, które istotnie wpływają na kształtowanie się zmiennej
+zależnej.
+
+**Sprawdzenie czy zmienne objaśniające są współliniowe:**
+
+```{r}
+vif(model_probit)
+```
+
+**Wniosek:** 
+
+Zmienne nie są współliniowe.
+
+**Identyfikacja obserwacji wpływowych:**
+
+```{r}
+c <- 4/(nrow(data_uczący) - (length(model_probit$coefficients) - 1) - 1)
+
+plot(model_probit, which = 4)
+abline(h = c, col = "red", lty = 2)
+```
+
+```{r}
+sum(cooks.distance(model_probit)>c)
+```
+
+W modelu probitowym występuje o 10 mniej obserwacji wpływowych niż w
+modelu logitowym.
+
+```{r}
+w1 <- 2 *(length(model_probit$coefficients) - 1) / nrow(data_uczący)
+w2 <- 3 *(length(model_probit$coefficients) - 1) / nrow(data_uczący)
+  
+plot(model_probit, which = 5)
+abline(v = c(w1, w2), col = "red", lty = c(2, 3))
+```
+
+W przypadku modelu probitowego również pozostawiamy wartości wpływowe.
+
+**Identyfikacja obserwacji nietypowych**
+
+Bonferroni Outlier Test:
+
+```{r}
+outlierTest(model_probit, n.max = Inf)
+```
+
+**Wniosek:** 
+
+Zgodnie z wynikami procedury Bonferroniego w modelu nie ma
+istotnie statystycznie odstających wartości.
+
+**Estymacja modelu metodą krokową** przy minimalizacji kryterium
+informacyjnego AIC. Wykonujemy ją trzema metodami krokowymi:
+
+```{r}
+model_probit_step_both <- step(model_probit)
+model_probit_step_for <- step(model_probit, direction = 'forward')
+model_probit_step_back <- step(model_probit, direction = 'backward')
+```
+
+```{r}
+summary(model_probit_step_both)
+```
+
+```{r}
+summary(model_probit_step_for)
+```
+
+```{r}
+summary(model_probit_step_back)
+```
+
+**Wniosek:** 
+
+Metoda ‘backward’ dała takie same wyniki, co metoda
+domyślna ‘both’. Mają one mniejsze wyniki dla kryterium informacyjnego
+AIC niż metoda 'forward'.
+
+Decydujemy się na zbudowanie modelu zgodnie z metodą 'both'/'backward':
+
+```{r}
+model_probit2 <- glm(PCOS ~ rosniecie_wlosow + wypryski_na_twarzy + 
+    ciemnienie_skory + nieregularnosc_cyklu + poziom_LH + Follicle_średnia + 
+    poziom_AMH, family = binomial(link = "probit"), data = data_uczący)
+
+summary(model_probit2)
+```
+
+**Testy istotności wszystkich zmiennych niezależnych oraz
+współliniowości w nowym modelu:**
+
+Test ilorazu wiarygodności i test Walda:
+
+```{r}
+lrtest(model_probit2)
+waldtest(model_probit2)
+```
+
+Test współliniowości:
+
+```{r}
+vif(model_probit2)
+```
+
+**Wniosek:** 
+
+Testy wykazały, że należy H0, zatem istnieją takie zmienne,
+które istotnie wpływają na kształtowanie się zmiennej zależnej oraz, że
+nie są one współliniowe.
+
+## Porównanie dobroci dopasowania modeli logitowych i probitowych:
+
+```{r}
+ocena_modelu_dwum <- function(model) {
+  kryterium_AIC <- model$aic
+  McFadden<- pR2(model)[4]
+  Cragg_Uhler<- pR2(model)[6]
+  ocena <- data.frame(kryterium_AIC, McFadden, Cragg_Uhler)
+  return(ocena)
+}
+```
+
+Wywołanie powyższej funkcji dla estymowanych modeli:
+
+```{r echo=FALSE}
+wyniki_oceny_logit <- rbind(
+  model_logit = ocena_modelu_dwum(model_logit), 
+  model_logit2 = ocena_modelu_dwum(model_logit2), 
+  model_probit = ocena_modelu_dwum(model_probit),
+  model_probit2 = ocena_modelu_dwum(model_probit2))
+wyniki_oceny_logit
+```
+
+**Wniosek:** 
+
+Według kryterium AIC najlepszy jest model_logit2, który
+został zbudowany przy pomocy metody krokowej 'backward'/'both'. Według
+miary PseudoR\^2 McFaddena najlepszy jest model_logit zbudowany przez
+nas. Według miary PseudoR\^2 Cragga Uhlera najlepszy jest model
+model_logit zbudowany przez nas.
+
+```{r}
+round(model_logit$coefficients,4)
+```
+
+Wzór modelu: 
+\[ logit(p) = -7.3675 + 1.5797 \cdot rosniecie\_wlosow1 + 1.1108 \cdot wypryski\_na\_twarzy + 1.6940 \cdot ciemnienie\_skory1 + 1.3267\cdot nieregularnosc\_cyklu - 0.0040 \cdot poziom\_TSH - 0.0297 \cdot poziom\_FSH + 0.1182 \cdot poziom\_LH + 0.5589 \cdot Follicle\_średnia + 0.0355 \cdot poziom\_AMH + 0.0073 \cdot poziom\_PRL + 0.0604 \cdot poziom\_PRG \]
+
+**Interpretacja modelu:**
+
+Ilorazy szans:
+
+```{r}
+round(exp(model_logit$coefficients), 4)
+```
+
+**Intercept** Szansa zachorowania na Zespół Policystycznych Jajnikówu
+pacjentów, którzy nie cierią na nadmierne rośnięcie włosów, wypryski na
+twarzy, ciemnienie skóry, z regularnymi miesiączkami, poziomami hormonów
+TSH, FSH, LH, AMH, PRL, PRG na poziomie 0 oraz ze średnią liczbą
+pęcherczyków w jajnikach równą 0 wynosi 0.0006.
+
+**rosniecie_wlosow1(TAK) -** Osoby, które skarżą się na nadmierny porost
+włosów mają ok. 4.5 raza większą szansę na zachorowanie na Zespół
+Policystycznych Jajników niż osoby, które nie skarżą się na tę
+dolegliwość przy założeniu takich samych wartości pozostałych zmiennych
+(ceteris paribus).
+
+**wypryski_na_twarzy1(TAK) -** Osoby, które skarżą się na występowanie
+wyprysków na twarzy mają ok. 3 razy większą szansę na zachorowanie na
+Zespół Policystycznych Jajników niż osoby, które nie skarżą się na tę
+dolegliwość przy założeniu takich samych wartości pozostałych zmiennych
+(ceteris paribus).
+
+**ciemnienie_skory1(TAK) -** Osoby, które skarżą się na ciemnienie skóry
+mają prawie 5.5 raza większą szansę na zachorowanie na Zespół
+Policystycznych Jajników niż osoby, które nie skarżą się na tę
+dolegliwość przy założeniu takich samych wartości pozostałych zmiennych
+(ceteris paribus).
+
+**nieregularnosc_cyklu(TAK) -** Osoby z nieregularnym cyklem
+miesiączkowym mają prawie 4 razy większą szansę na zachorowanie na
+Zespół Policystycznych Jajników niż osoby, które mają regularny cykl
+miesiączkowy przy założeniu takich samych wartości pozostałych zmiennych
+(ceteris paribus).
+
+**poziom_TSH -** Wraz ze wzrostem poziomu TSH o jedną jednostkę, szansa
+zachorowania na Zespół Policystycznych Jajników maleje o ok. 0.4% przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+**poziom_FSH -** Wraz ze wzrostem poziomu FSH o jedną jednostkę, szansa
+zachorowania na Zespół Policystycznych Jajników maleje o ok. 3% przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+**poziom_LH -** Wraz ze wzrostem poziomu LH o jedną jednostkę, szansa
+zachorowania na Zespół Policystycznych Jajników rośnie o ok. 12.5% przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+**Follicle_średnia -** Wraz ze wzrostem średniej ilości pęcherzyków na
+jajnikach o jeden, szansa zachorowania na Zespół Policystycznych
+Jajników rośnie o ok. 75% przy założeniu takich samych wartości
+pozostałych zmiennych (ceteris paribus).
+
+**poziom_AMH -** Wraz ze wzrostem poziomu AMH o jedną jednostkę, szansa
+zachorowania na Zespół Policystycznych Jajników wzrośnie o ok. 3.5% przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+**poziom_PRL -** Wraz ze wzrostem poziomu PRL o jedną jednostkę, szansa
+zachorowania na Zespół Policystycznych Jajników wzrośnie o ok. 0.7% przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+**poziom_PRG -** Wraz ze wzrostem poziomu PRG o jedną jednostkę, szansa
+zachorowania na Zespół Policystycznych Jajników rośnie o ok. 6% przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+### Miary jakości predykcji
+
+Miary oparte na tablicy trafności dla wybranego punktu odcięcia p = 0.5.
+
+Poniższa funkcja `miary_pred` została określona dla argumentów: `model`
+(model dwumianowy), `dane` (np. zbiór uczący, testowy), `Y` (obserwowany
+Y 0-1 w analizowanym zbiorze danych).
+
+```{r}
+miary_pred <- function(model, dane, Y, p = 0.5) {
+ tab <- table(obserwowane = Y, przewidywane = ifelse(predict(model, dane, type = "response") > p, 1, 0))
+ ACC <- (tab[1,1]+tab[2,2])/sum(tab) # dobrze sklasyfikowane
+ ER <- (tab[1,2]+tab[2,1])/sum(tab) # źle sklasyfikowane
+ SENS <- tab[2,2]/(tab[2,1]+tab[2,2])
+ SPEC <- tab[1,1]/(tab[1,1]+tab[1,2])
+ PPV <- tab[2,2]/(tab[2,2]+tab[1,2])
+ NPV <- tab[1,1]/(tab[1,1]+tab[2,1])
+ miary <- data.frame(ACC, ER, SENS, SPEC, PPV, NPV)
+ return(miary)
+ }
+```
+
+**Ocena zdolności predykcyjnej na zbiorze uczącym:**
+
+```{r}
+wyniki_miary_pred <- rbind(
+  model_logit = miary_pred(model = model_logit, dane = data_uczący,  Y = data_uczący$PCOS, 0.5), 
+  model_logit2 = miary_pred(model = model_logit2, dane = data_uczący,  Y = data_uczący$PCOS, 0.5), 
+  model_probit = miary_pred(model = model_probit, dane = data_uczący, Y = data_uczący$PCOS,  0.5),
+    model_probit2 = miary_pred(model = model_probit2, dane = data_uczący, Y = data_uczący$PCOS,  0.5))
+wyniki_miary_pred
+```
+
+**Ocena zdolności predykcyjnej na zbiorze testowym:**
+
+```{r}
+wyniki_miary_pred2 <- rbind(
+  model_logit = miary_pred(model = model_logit, dane = data_testowy,  Y = data_testowy$PCOS, 0.5), 
+  model_logit2 = miary_pred(model = model_logit2, dane = data_testowy,  Y = data_testowy$PCOS, 0.5), 
+  model_probit = miary_pred(model = model_probit, dane = data_testowy, Y = data_testowy$PCOS,  0.5),
+    model_probit2 = miary_pred(model = model_probit2, dane = data_testowy, Y = data_testowy$PCOS,  0.5))
+wyniki_miary_pred2
+```
+
+```{r}
+różnice <- wyniki_miary_pred2 - wyniki_miary_pred
+różnice
+```
+
+**Interpretacja:**
+
+**Zliczeniowy R\^{2} - ACC -** Udział liczby trafnie sklasyfikowanych
+jednostek w ogólnej liczbie jednostek.
+
+**Wskaźnik błędu - ER -** Udział liczby źle sklasyfikowanych jednostek w
+ogólnej liczbie jednostek.
+
+**Czułość - SENS -** Udział liczby trafnie oszacowanych 1 w liczbie
+wszystkich obserwowanych 1.
+
+**Swoistość - SPEC -** Udział liczby trafnie oszacowanych 0 w liczbie
+wszystkich obserwowanych 0.
+
+**Dodatnia zdolność predykcyjna - PPV -** Udział liczby trafnie
+oszacowanych 1 w liczbie wszystkich prognozowanych 1.
+
+**Ujemna zdolność predykcyjna - NPV -** Udział liczby trafnie
+oszacowanych 0 w liczbie wszystkich prognozowanych 0.
+
+**Wniosek:** W związku z tym, że otrzymane wyniki niewiele się różnią to
+nie sugerujemy się nimi, tylko wynikami statystycznymi, otrzymanymi
+powyżej.
+
+## Krzywa ROC:
+
+Krzywa zielona - ROC wyznaczona na zbiorze uczącym Krzywa niebieska -
+ROC wyznaczona na zbiorze testowym
+
+**Model_logit:**
+
+```{r}
+roc_logit <- roc(model_logit$y, model_logit$fitted.values)
+roc_logit_pred <- roc(data_testowy$PCOS, predict(model_logit, data_testowy, type = "response"))
+plot(roc_logit, main = "krzywe ROC dla modelu logitowego:", col = "lightgreen")
+lines(roc_logit_pred, col = "lightblue")
+```
+
+**Model_logit_2:**
+
+```{r}
+roc_logit2 <- roc(model_logit2$y, model_logit2$fitted.values)
+roc_logit2_pred <- roc(data_testowy$PCOS, predict(model_logit2, data_testowy, type = "response"))
+plot(roc_logit2, main = "krzywe ROC dla modelu logitowego2:", col = "lightgreen")
+lines(roc_logit2_pred, col = "lightblue")
+```
+
+**Model_probit:**
+
+```{r}
+roc_probit <- roc(model_probit$y, model_probit$fitted.values)
+roc_probit_pred <- roc(data_testowy$PCOS, predict(model_probit, data_testowy, type = "response"))
+plot(roc_probit, main = "krzywe ROC dla modelu probitowego:", col = "lightgreen")
+lines(roc_probit_pred, col = "lightblue")
+```
+
+**Model_probit_2:**
+
+```{r}
+roc_probit2 <- roc(model_probit2$y, model_probit2$fitted.values)
+roc_probit2_pred <- roc(data_testowy$PCOS, predict(model_probit2, data_testowy, type = "response"))
+plot(roc_probit2, main = "krzywe ROC dla modelu probit2owego:", col = "lightgreen")
+lines(roc_probit2_pred, col = "lightblue")
+```
+
+**Wniosek:**
+
+Wszystkie wykresy krzywej ROC są podobne. Każdy z nich mówi o bardzo
+dobrej lub nawet prawie doskonałej jakości predykcji.
+
+**Pole powierzchni pod krzywą ROC:**
+
+```{r}
+cat("AUC dla zbioru uczącego:\n")
+auc(roc_logit)
+auc(roc_logit2)
+auc(roc_probit)
+auc(roc_probit2)
+cat("\nAUC dla zbioru testowego:\n")
+auc(roc_logit_pred)
+auc(roc_logit2_pred)
+auc(roc_probit_pred)
+auc(roc_probit2_pred)
+```
+
+**Wniosek:** 
+
+Na podstawie wielkości pola pod krzywą ROC dla każdego z
+modeli można stwierdzić, że jakość predykcji jest doskonała. Minimalnie
+lepszy w tym przypadku jest model_probit.
+
+**Interpretacja modelu:**
+
+```{r}
+model_probit$coefficients
+```
+
+Interpretacja modelu probitowego sprowadza się do określenia czy zmienna
+objaśniająca jest stymulantą czy destymulantą.
+
+**Stymulanta** - wzrost wartości zmiennej niezależnej świadczy o wzroście
+poziomu zmiennej zależnej, a spadek wartości świadczy o spadku poziomu
+zmiennej zależnej.
+
+**Destymulanta** - wzrost wartości zmiennej niezależnej świadczy o spadku
+poziomu zmiennej zależnej, a spadek wartości świadczy o wzroście
+wartości zmiennej zależnej.
+
+Zatem zmienne: rosniecie_wlosow, wypryski_na_twarzy, ciemnienie_skory,
+nieregularnosc_cyklu, poziom_LH, Follicle_średnia, poziom_AMH,
+poziom_PRL są stymulantami, ponieważ wartości współczynników sa większe
+od 0.
+
+Zmienne: poziom_TSH, poziom_FSH oraz poziom_PRG są destymulantami,
+ponieważ wartości współczynników są mniejsze od 0.
+
+## Estymacja modelu z interakcją:
+
+Zweryfikowanie, które zmienne odnoszące się do zmian wpływających na wygląd ciała istotnie statystycznie wpływają na występowanie Zespołu Policystycznych Jajników.
+
+```{r}
+model_inter <- glm(PCOS ~ BMI_kat + rosniecie_wlosow + wypadanie_wlosow + wypryski_na_twarzy + ciemnienie_skory + przybranie_na_wadze + wypadanie_wlosow*rosniecie_wlosow, data = data, family = binomial)
+summary(model_inter)
+```
+
+**Ilorazy szans:**
+
+```{r}
+round(exp(model_inter$coefficients), 4)
+```
+
+Wzór modelu: 
+\[ logit(p) = -2.7736 -0.5047 \cdot BMI\_kat\_poprawna + 0.5110 \cdot BMI\_kat\_nadwaga + 0.2197 \cdot BMI\_kat\_otyłość + 1.0514 \cdot rosniecie\_wlosow1 -0.3290 \cdot wypadanie\_wlosow1 + 1.0291 \cdot wypryski\_na\_twarzy1 + 1.5026 \cdot ciemnienie\_skory1 + 1.5860 \cdot przybranie\_na\_wadze1 + 1.0343 \cdot rosniecie\_wlosow1:wypadanie\_wlosow1 \]
+
+**Intercept –** Wśród osób z niedowagą, którym nie rosną nadmiernie
+włosy, nie wypadają nadmiernie włosy, nie mają wyprysków na twarzy, nie
+ciemnieje skóra ani nie przybrały na wadze, szansa zachorowania na PCOS
+wynosi 0.0624.
+
+**rosniecie_wlosow1(TAK) –** Wśród osób skarżących się na wypadanie
+włosów, którym rosną nadmiernie włosy, szansa zachorowania na PCOS jest
+prawie 3 razy większa niż szansa zachorowania na PCOS wśród osób, którym
+nie rosną nadmiernie włosy, przy założeniu takich samych wartości
+pozostałych zmiennych (ceteris paribus).
+
+**wypryski_na_twarzy1(TAK) -** Wśród osób, które mają wypryski na
+twarzy, szansa zachorowania na PCOS jest prawie 3 razy większa niż
+szansa zachorowania na PCOS wśród osób, które nie mają wyprysków na
+twarzy, przy założeniu takich samych wartości pozostałych zmiennych
+(ceteris paribus).
+
+**ciemnienie_skory1(TAK) -** Wśród osób, którym ciemnieje skóra, szansa
+zachorowania na PCOS jest prawie 4.5 razy większa niż szansa
+zachorowania na PCOS wśród osób, którym nie ciemnieje skóra, przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+**przybranie_na_wadze1(TAK) -** Wśród osób, które przybrały na wadze,
+szansa zachorowania na PCOS jest prawie 5 razy większa niż szansa
+zachorowania na PCOS wśród osób, które nie przybrały na wadze, przy
+założeniu takich samych wartości pozostałych zmiennych (ceteris
+paribus).
+
+**moderator - wypadanie_wlosów:**
+
+**rosniecie_wlosów1(TAK):wypadanie_wlosow1(TAK) –**
+
+\[ \frac{\frac{rosniecie\_wlosow\_TAK}{rosniecie\_wlosow\_NIE} wypadanie\_wlosow\_TAK}{\frac{rosniecie\_wlosow\_TAK}{rosniecie\_wlsow\_NIE}wypadanie\_wlosow\_NIE} \]
+
+Iloraz szans zachorowania na PCOS wśród pacjentów, którym rosną
+nadmiernie włosy względem osób, którym nie rosną nadmiernie włosy w
+grupie osób, którym wypadają włosy jest prawie 3 razy większy niż wśród
+osób, którym nie wypadają włosy przy założeniu takich samych wartości
+pozostałych zmiennych (ceteris paribus).
+
+**moderator - rosniecie_wlosów:**
+
+**rosniecie_wlosów_1(TAK):wypadanie_wlosow_1(TAK) -**
+
+\[ \frac{\frac{wypadanie\_wlosow\_TAK}{wypadanie\_wlosow\_NIE} rosniecie\_wlosow\_TAK}{\frac{wypadanie\_wlosow\_TAK}{wypadanie\_wlsow\_NIE}rosniecie\_wlosow\_NIE} \]
+
+Iloraz szans zachorowania na PCOS wśród pacientów, którym wypadają
+nadmiernie włosy względem osób, którym nie wypadają nadmiernie włosy w
+grupie osób, którym rosną nadmiernie włosy jest prawie 3 razy większa
+niż wśród osón, którym nie rosną nadmiernie włosy przy założeniu takich
+samych wartości pozostałych zmiennych (ceteris paribus).
+
+**pozostałe zmienne -** W przypadku pozostałych zmiennych interpretacja
+nie ma sensu, ponieważ nie różni się ona statystycznie istotnie od
+interpretacji wyrazu wolnego.
+
+## Estymacja modelu wielomianowego porządkowego:
+
+**Potrzebna biblioteka:**
+
+```{r}
+library("MASS")
+```
+
+W budowie modelu wielomianowego porządkowego zdecydowałyśmy się użyć
+jako zmiennej objaśnianej, wcześniej utworzonej, nowej zmiennej
+kategorialnej BMI_kat, która posiada 4 warianty określające wagę ze
+względu na wartość BMI - "niedowaga", "poprawna", "nadwaga", "otyłość".
+Jako zmienną objaśniającą wybrałyśmy wypryski_na_twarzy.
+
+```{r}
+data$BMI_kat <- as.ordered(data$BMI_kat)
+model_wielom_porz <- polr(BMI_kat ~ wypryski_na_twarzy , data = data)
+summary(model_wielom_porz)
+```
+Wzory:
+
+\[ logit(P(Y\leqslant1))= -2.6586 + 0.08264 \cdot wypryski\_na\_twarzy1 \]
+\[ logit(P(Y\leqslant2))= 0.3431 + 0.08264 \cdot wypryski\_na\_twarzy1 \]
+\[ logit(P(Y\leqslant3))= 2.4864 + 0.08264 \cdot wypryski\_na\_twarzy1 \]
+
+**Interpretacja modelu:**
+
+**Ilorazy szans:**
+
+```{r}
+round(exp(model_wielom_porz$coefficients), 4)
+round(exp(model_wielom_porz$zeta), 4)
+```
+
+**wypryski_na_twarzy1(TAK) –** Szansa, że BMI będzie na niższych
+poziomach jest 8,62% większa w grupie osób z wypryskami na twarzy niż u
+osób bez wyprysków.
+
+**Intercept 1 - niedowaga\|poprawna –** W grupie osób bez wyprysków na
+twarzy szansa, że wystąpi niedowaga wynosi 0.07.
+
+**Intercept 2 - poprawna\|nadwaga –** W grupie osób bez wyprysków na
+twarzy szansa, że wystąpi niedowaga lub poprawna waga wynosi 1.4094.
+
+**Intercept 3 - nadwaga\|otyłość -** W grupie osób bez wyprysków na
+twarzy szansa, że wystąpi niedowaga, poprawna waga lub nadwaga wynosi
+12.0177.
+
+# Podsumowanie
+
+Merytoryczna ocena modelu dwumianowego logitowego: 
+
+Brak istotności statystycznej zmiennych dotyczących poziomu hormonów wydaje się błędny. Zespół Policystycznych Jajników cechuje się zaburzeniami hormonalnymi i wykrycie tych nieprawidłowości pomaga dokonać poprawnej diagnozy.
+
+Według miary pseudo R^2 modelem o najlepszym dopasowaniu jest model_logit (model z większą ilością zmiennych objaśniających). Cechuje się on jednak większą wartością kryterium AIC w porównaniu do modelu z mniejszą ilością zmiennych objaśniających.
+
+Zgodnie z wynikami miar jakości predykcji opartych na tablicy trafności oraz krzywej ROC, zdolność predykcyjna modeli logitowych i probitowych jest niemal doskonała.
+
+Model wielomianowy:
+
+Ocena merytoryczna modelu:
+
+Zmienną nieistotną statystycznie okazała się zmienna dotycząca poziomu BMI pacjentów, co wydaje się wynikiem błędnym, ponieważ szacuje się że ok. 40-80% osób, u których stwierdzono występowanie Zespołu Policystycznych Jajników zmaga się z nadwagą. Występowanie Zespołu Policystycznych Jajników również idzie w parze z szeregiem zaburzeń metabolicznych.
+
+Dodatkowo stworzyłyśmy model wielomianowy porządkowy z utworzoną przez nas zmienną kategorialną BMI. Model nie wnosi informacji na temat zachorowania na Zespół Policystycznych Jajników, ale pokazuje ciekawy wniosek, mówiący o zależności między niższą wagą a problemami ze stanem skóry. Merytorycznie nie wydaje się, aby między tymi zmiennymi występowała jakakolwiek prawidłowość i powodem takiego wyniku jest prawdopodobnie grupa badawcza, u której zachodziły takie tendencje.
+
+
+# Podział obowiązków
+
+Każda część projektu została wykonana wspólnie podczas spotkań.
